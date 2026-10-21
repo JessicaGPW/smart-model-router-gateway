@@ -1,8 +1,3 @@
-console.assert(
-    process.env.OPENROUTER_API_KEY,
-    'OPENROUTER_API_KEY is not set in env variables'
-)
-
 export type ModelConfig = {
     apiKey: string;
     httpReferer: string;
@@ -22,28 +17,30 @@ export type ModelConfig = {
 }
 
 export const config: ModelConfig = {
-    apiKey: process.env.OPENROUTER_API_KEY!,
-    httpReferer: 'https://openrouter.ai/.com',
+    apiKey: process.env.OPENROUTER_API_KEY ?? '',
+    httpReferer: 'https://github.com/JessicaGPW/smart-model-router-gateway',
     xTitle: 'SmartModelRouterGateway',
-    port: 3000,
+    port: Number(process.env.PORT ?? 3000),
     models: [
-        // top 4 para a listagem ordenada por preço
+        // primeiro da listagem ordenada por preço
         'minimax/minimax-m3.1-flash:free',
-        
-
-        // top 3 para listagem de throughput
+        // primeiro da listagem ordenada por throughput
         'thinkingmachines/inkling-small:free',
-        
     ],
     temperature: 0.2,
     maxTokens: 100,
-    systemPrompt: 'What is rate limiting?',
+    systemPrompt:
+        'You are a concise technical assistant. Answer the user question clearly and accurately in the same language it was asked. If you do not know, say so.',
     provider: {
         sort: {
-            by:'throughput',
-            // by: 'latency',
-            // by: 'price',
+            by: 'throughput', // 'latency' | 'price' | 'throughput'
             partition: 'none'
         }
+    }
+}
+
+export function assertConfig(cfg: ModelConfig): void {
+    if (!cfg.apiKey) {
+        throw new Error('OPENROUTER_API_KEY is not set. Copy .env.example to .env and add your key.')
     }
 }

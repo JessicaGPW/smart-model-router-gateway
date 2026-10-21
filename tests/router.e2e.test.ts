@@ -4,13 +4,11 @@ import { createServer } from '../src/server.ts'
 import { config } from '../src/config.ts'
 import { type LLMResponse, OpenRouterService } from '../src/openrouterService.ts'
 
-console.assert(
-    process.env.OPENROUTER_API_KEY,
-    'OPENROUTER_API_KEY is not set in env variables'
-)
+// Testes de integração: chamam o OpenRouter de verdade.
+// Rodam só com `npm run test:e2e` e uma OPENROUTER_API_KEY válida.
+const skip = process.env.RUN_E2E !== '1' || !process.env.OPENROUTER_API_KEY
 
-
-test('routes to cheapest model by default', async () => {
+test('routes to cheapest model when sorting by price', { skip }, async () => {
     const customConfig ={
         ...config,
         provider: {
@@ -35,7 +33,7 @@ test('routes to cheapest model by default', async () => {
     assert.equal(body.model, 'minimax/minimax-m3.1-flash:free')
 })
 
-test('routes to highest throughput model by default', async () => {
+test('routes to highest throughput model when sorting by throughput', { skip }, async () => {
     const customConfig ={
         ...config,
         provider: {

@@ -26,7 +26,7 @@ Este protótipo encaminha solicitações ao OpenRouter. A política ativa está 
 - Lista configurável de modelos candidatos e ordenação do provedor.
 - Resposta com o identificador do modelo usado e o conteúdo gerado.
 - Configuração local por variável de ambiente OPENROUTER_API_KEY.
-- Testes com o executor nativo de testes do Node.js e injeção HTTP do Fastify.
+- Testes unitários com cliente simulado (sem rede) e testes de integração opcionais.
 
 ## Tecnologias
 
@@ -45,13 +45,13 @@ A aplicação separa configuração, transporte HTTP e integração com o proved
 2. src/server.ts define a rota e valida o corpo da requisição.
 3. src/openrouterService.ts monta a solicitação do modelo e transforma a resposta em model e content.
 4. src/config.ts reúne chave, modelos candidatos, parâmetros e política do provedor.
-5. tests/router.e2e.test.ts verifica o caminho HTTP e o modelo retornado.
+5. tests/router.test.ts cobre a rota com cliente simulado; tests/router.e2e.test.ts verifica a integração real.
 
 O diagrama e as observações de implementação estão em [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Requisitos e configuração local
 
-É necessário ter Node.js compatível com a versão usada pelo projeto, npm e uma chave de API do OpenRouter.
+É necessário ter Node.js 22.18 ou superior (executa TypeScript direto), npm e uma chave de API do OpenRouter.
 
 No PowerShell, a partir da pasta do repositório:
 
@@ -69,7 +69,7 @@ Não publique o arquivo .env nem cole a chave em mensagens, commits ou comandos 
 
     npm run dev
 
-O servidor local inicia na porta 3000. O modo de desenvolvimento observa mudanças e reinicia o processo.
+O servidor local inicia na porta 3000 (ou na definida em PORT) e encerra com mensagem clara se a chave não estiver configurada. O modo de desenvolvimento observa mudanças e reinicia o processo.
 
 Exemplo de chamada pelo PowerShell:
 
@@ -84,9 +84,14 @@ Formato esperado da resposta:
 
 ## Testes
 
-    npm test
+    npm test            # unitários, cliente simulado: sem chave, sem rede, sem custo
+    npm run typecheck   # checagem de tipos com tsc
 
-Os testes atuais usam o SDK e fazem chamadas ao serviço externo. Eles precisam de OPENROUTER_API_KEY válida e acesso à internet. Não são testes isolados ou totalmente simulados; a disponibilidade do provedor e dos modelos pode afetar o resultado.
+Integração com o OpenRouter real (usa a chave do .env e pode consumir créditos):
+
+    $env:RUN_E2E='1'; npm run test:e2e
+
+O resultado da integração depende da disponibilidade dos modelos no provedor.
 
 ## Estrutura do projeto
 
@@ -97,30 +102,27 @@ Os testes atuais usam o SDK e fazem chamadas ao serviço externo. Eles precisam 
     │   ├── openrouterService.ts
     │   └── server.ts
     ├── tests/
+    │   ├── router.test.ts
     │   └── router.e2e.test.ts
     ├── .env.example
     ├── .gitignore
     ├── package.json
     ├── package-lock.json
     ├── tsconfig.json
+    ├── LICENSE
     ├── README.md
     └── docs/
-        ├── ARCHITECTURE.md
-        └── PUBLISH_GITHUB_POWERSHELL.md
+        └── ARCHITECTURE.md
 
 ## Limites e próximos passos
 
 Antes de tratar o protótipo como serviço de produção, recomenda-se:
 
-- validar a presença da chave na inicialização e falhar com mensagem clara;
-- usar a chave da configuração injetada ao criar o cliente do OpenRouter;
-- usar a porta configurada em vez de repetir o valor no ponto de inicialização;
-- retornar respostas de erro JSON consistentes sem expor detalhes internos;
 - adicionar autenticação, limites de requisição e controles de custo;
 - registrar latência, modelo selecionado, erros e uso sem armazenar prompts sensíveis;
-- separar testes unitários simulados de testes de integração que chamam o OpenRouter;
 - definir timeouts, política de repetição e comportamento para indisponibilidade;
 - documentar retenção e tratamento de dados enviados ao provedor.
 
+## Licença
 
-
+MIT. Veja [LICENSE](LICENSE).

@@ -30,11 +30,12 @@ O gateway atual centraliza a integração e os parâmetros de seleção. Ele nã
 
 | Módulo | Responsabilidade |
 |---|---|
-| src/index.ts | Cria os objetos de serviço e servidor e inicia a escuta na porta 3000 |
+| src/index.ts | Cria os objetos de serviço e servidor e valida a chave e inicia a escuta na porta de config.port (padrão 3000, ou PORT) |
 | src/server.ts | Define POST /chat, exige question e aplica tamanho mínimo de cinco caracteres |
 | src/openrouterService.ts | Cria o cliente OpenRouter, envia system/user messages e converte a resposta |
 | src/config.ts | Mantém API key, modelos, prompt, temperatura, limite de tokens e ordenação |
-| tests/router.e2e.test.ts | Exercita a rota com Fastify inject e espera modelos diferentes para políticas configuradas |
+| tests/router.test.ts | Testes unitários com cliente simulado: política, prompt, validação, erro 500, conteúdo vazio |
+| tests/router.e2e.test.ts | Integração opcional com o OpenRouter real (RUN_E2E=1) |
 | .env | Configuração local e segredo; não deve entrar no Git |
 | .env.example | Modelo sem segredo para documentar a variável necessária |
 
@@ -49,7 +50,7 @@ O gateway atual centraliza a integração e os parâmetros de seleção. Ele nã
 
 ## Política de seleção
 
-A lista de modelos e a ordenação do provedor são definidas em src/config.ts. A política ativa está configurada para throughput. O código também contém comentários sobre outras ordenações, como preço e latência.
+A lista de modelos e a ordenação do provedor são definidas em src/config.ts. A política ativa está configurada para throughput. Outras ordenações aceitas: price e latency.
 
 A seleção final depende do comportamento do OpenRouter e da disponibilidade dos modelos. O gateway não calcula métricas próprias nem garante uma economia ou latência específica.
 
@@ -78,17 +79,15 @@ A validação atual exige que question tenha no mínimo cinco caracteres. Não h
 
 ## Testes e dependências externas
 
-Os testes criam a aplicação Fastify e usam app.inject para chamar a rota sem abrir uma porta HTTP. No entanto, o OpenRouterService usado pelos testes faz chamadas reais ao OpenRouter. Portanto, os testes exigem uma chave válida e conexão externa; não são uma suíte inteiramente isolada.
+Os testes usam app.inject para chamar a rota sem abrir uma porta HTTP. O OpenRouterService aceita um cliente injetado, então `npm test` roda com um cliente simulado: sem rede, sem chave e sem custo. Os testes de integração em tests/router.e2e.test.ts chamam o OpenRouter real e só rodam com `RUN_E2E=1` e uma chave válida.
 
-## Observações de implementação
+## Decisões de implementação
 
-- config.ts declara uma porta, mas index.ts atualmente inicia o servidor com o número 3000 diretamente.
-- OpenRouterService recebe uma configuração opcional, mas cria o cliente usando a chave do módulo global config em vez de this.config. Isso limita a injeção de configuração e deve ser corrigido antes de depender dela em testes ou ambientes diferentes.
-- A checagem console.assert para a chave não interrompe necessariamente a inicialização; uma validação explícita com erro claro é mais previsível.
-- A rota captura erros e responde com status 500 sem um corpo JSON padronizado.
-- O tratamento da resposta deve lidar explicitamente com ausência de choices ou content.
-
-Esses itens são pontos de evolução observados no código atual, não funcionalidades já implementadas.
+- A porta vem de config.port (variável PORT, padrão 3000).
+- O cliente do OpenRouter é criado a partir de this.config, então a configuração injetada vale também para chave, referer e título.
+- index.ts valida a chave com assertConfig e falha com mensagem clara antes de abrir a porta.
+- Erros do provedor viram 500 com corpo JSON padronizado, sem expor detalhes internos.
+- Conteúdo ausente vira string vazia; conteúdo em partes é concatenado.
 
 ## Evolução proposta para uso empresarial
 

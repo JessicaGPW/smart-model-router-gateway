@@ -7,18 +7,20 @@ export type LLMResponse = {
     content: string;
 }
 
+type ChatClient = Pick<OpenRouter, 'chat'>
+
 export class OpenRouterService {
-    private client: OpenRouter
+    private client: ChatClient
     private config: ModelConfig
-    constructor(configOverride?: ModelConfig) {
+
+    constructor(configOverride?: ModelConfig, client?: ChatClient) {
         this.config = configOverride ?? config
 
-        this.client = new OpenRouter({
-            apiKey: config.apiKey,
-            httpReferer: config.httpReferer,
-            xTitle: config.xTitle
+        this.client = client ?? new OpenRouter({
+            apiKey: this.config.apiKey,
+            httpReferer: this.config.httpReferer,
+            xTitle: this.config.xTitle
         })
-
     }
 
     async generate(prompt: string): Promise<LLMResponse> {
@@ -26,7 +28,7 @@ export class OpenRouterService {
             models: this.config.models,
             messages: [
                 { role: 'system', content: this.config.systemPrompt },
-                { role: 'user', content: prompt}
+                { role: 'user', content: prompt }
             ],
             stream: false,
             temperature: this.config.temperature,
@@ -34,8 +36,13 @@ export class OpenRouterService {
             provider: this.config.provider as ChatGenerationParams['provider']
         })
 
-        
-        const content = String(response.choices.at(0)?.message.content) ?? ''
+        const raw = response.choices.at(0)?.message.content
+        const content = typeof raw === 'string'
+            ? raw
+            : Array.isArray(raw)
+                ? raw.map((part) => ('text' in part ? part.text : '')).join('')
+                : ''
+
         return {
             model: response.model,
             content,
