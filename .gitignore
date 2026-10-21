@@ -1,0 +1,13 @@
+# Dependências e builds
+node_modules/
+dist/
+# Configurações e segredos locais
+.env
+.env.*
+!.env.example
+# Logs e arquivos temporários
+*.log
+.DS_Store
+Thumbs.db
+__pycache__/
+.venv/
